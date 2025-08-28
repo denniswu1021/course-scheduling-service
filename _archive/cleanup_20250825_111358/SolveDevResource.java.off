@@ -1,0 +1,95 @@
+package com.example;
+
+import java.util.*;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+
+import io.quarkus.arc.profile.IfBuildProfile;
+import org.optaplanner.core.api.solver.SolverJob;
+import org.optaplanner.core.api.solver.SolverManager;
+
+import com.example.domain.ScheduleSolution;
+import com.example.util.BeanUtil;
+
+import curriculumcourse.curriculumcourse.Course;
+import curriculumcourse.curriculumcourse.Lecture;
+import curriculumcourse.curriculumcourse.Period;
+import curriculumcourse.curriculumcourse.Room;
+
+@IfBuildProfile("dev")
+@Path("/solve/dev")
+public class SolveDevResource {
+
+    @Inject
+    SolverManager<ScheduleSolution, UUID> solverManager;
+
+    @POST
+    @Path("/sample")
+    @Produces(MediaType.APPLICATION_JSON)
+    public SolveResult solveSample() throws Exception {
+        // === 準備小型樣本資料（不改動你的原始 model） ===
+        Room r1 = new Room();
+        Room r2 = new Room();
+        Period p1 = new Period();
+        Period p2 = new Period();
+        Period p3 = new Period();
+        Period p4 = new Period();
+
+        Course c1 = new Course();
+        // 若 Course 有 minWorkingDaySize，可自行在前端輸入；預設 null 表示不扣分
+
+        Lecture l1 = new Lecture();
+        Lecture l2 = new Lecture();
+        Lecture l3 = new Lecture();
+        Lecture l4 = new Lecture();
+        // 嘗試設定關聯（若 setter 不存在就忽略）
+        BeanUtil.setIfExists(l1, "setCourse", c1);
+        BeanUtil.setIfExists(l2, "setCourse", c1);
+        BeanUtil.setIfExists(l3, "setCourse", c1);
+        BeanUtil.setIfExists(l4, "setCourse", c1);
+
+        // 初始時不指定 room/period，讓 Solver 去排
+        List<Room> rooms = Arrays.asList(r1, r2);
+        List<Period> periods = Arrays.asList(p1, p2, p3, p4);
+        List<Course> courses = Arrays.asList(c1);
+        List<Lecture> lectures = Arrays.asList(l1, l2, l3, l4);
+
+        ScheduleSolution unsolved = new ScheduleSolution();
+        unsolved.setRoomList(rooms);
+        unsolved.setPeriodList(periods);
+        unsolved.setCourseList(courses);
+        unsolved.setLectureList(lectures);
+
+        UUID problemId = UUID.randomUUID();
+        SolverJob<ScheduleSolution, UUID> job = solverManager.solve(problemId, unsolved);
+        ScheduleSolution solved = job.getFinalBestSolution();
+
+        // 做個簡單統計
+        int assigned = 0;
+        for (Lecture lec : solved.getLectureList()) {
+            try {
+                Object room = lec.getClass().getMethod("getRoom").invoke(lec);
+                Object period = lec.getClass().getMethod("getPeriod").invoke(lec);
+                if (room != null && period != null) assigned++;
+            } catch (Exception ignored) {}
+        }
+
+        String score = (solved.getScore() == null) ? "UNKNOWN" : solved.getScore().toString();
+        return new SolveResult(solved.getLectureList().size(), assigned, score);
+    }
+
+    // 回傳 DTO
+    public static final class SolveResult {
+        public int lectureCount;
+        public int assignedCount;
+        public String score;
+        public SolveResult(int lectureCount, int assignedCount, String score) {
+            this.lectureCount = lectureCount;
+            this.assignedCount = assignedCount;
+            this.score = score;
+        }
+    }
+}

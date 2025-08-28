@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.example</groupId>
+  <artifactId>course-scheduling-service</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <name>course-scheduling-service</name>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>17</maven.compiler.release>
+    <quarkus.version>3.20.1</quarkus.version>
+  </properties>
+
+  <!-- 雿輻 BAMOE 9.2.1 ??BOM 蝞∠???-->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.ibm.bamoe</groupId>
+        <artifactId>bamoe-bom</artifactId>
+        <version>9.2.1-ibm-0005</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+<dependency>
+<groupId>io.quarkus.platform</groupId>
+<artifactId>quarkus-camel-bom</artifactId>
+<version>3.20.1</version>
+<type>pom</type>
+<scope>import</scope>
+</dependency>
+
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- DMN / 瘙箇? -->
+    <dependency>
+      <groupId>org.drools</groupId>
+      <artifactId>drools-quarkus-decisions</artifactId>
+    </dependency>
+
+    <!-- DRL / 閬? -->
+    <dependency>
+      <groupId>org.drools</groupId>
+      <artifactId>drools-quarkus-rules</artifactId>
+    </dependency>
+
+    <!-- BPMN / 瘚? -->
+    <dependency>
+      <groupId>org.jbpm</groupId>
+      <artifactId>jbpm-quarkus</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jbpm</groupId>
+      <artifactId>jbpm-with-drools-quarkus</artifactId>
+    </dependency>
+
+    <!-- ???? REST ?賢?嚗eactive + Jackson嚗?-->
+<dependency>
+  <groupId>io.quarkus</groupId>
+  <artifactId>quarkus-rest</artifactId>
+  <version>${quarkus.version}</version>
+</dependency>
+<dependency>
+  <groupId>io.quarkus</groupId>
+  <artifactId>quarkus-rest-jackson</artifactId>
+  <version>${quarkus.version}</version>
+</dependency>
+
+
+    <!-- 皜祈岫 -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jaxb</artifactId>
+    </dependency>
+
+<dependency>
+<groupId>org.apache.camel.quarkus</groupId>
+<artifactId>camel-quarkus-optaplanner</artifactId>
+</dependency>
+<dependency>
+<groupId>io.quarkus</groupId>
+<artifactId>quarkus-junit5</artifactId>
+<version>${quarkus.version}</version>
+<scope>test</scope>
+</dependency>
+
+  </dependencies>
+
+  <repositories>
+    <repository>
+      <id>central</id>
+      <url>https://repo.maven.apache.org/maven2</url>
+      <releases />
+      <snapshots><enabled>false</enabled></snapshots>
+    </repository>
+    <repository>
+      <id>ibm-bamoe-enterprise-maven-repo</id>
+      <url>file:///C:/bamoe/805_to_920/maven-repo-9.2.1-ibm-0005/</url>
+      <releases />
+      <snapshots><enabled>false</enabled></snapshots>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>central</id>
+      <url>https://repo.maven.apache.org/maven2</url>
+      <releases />
+      <snapshots><enabled>false</enabled></snapshots>
+    </pluginRepository>
+    <pluginRepository>
+      <id>ibm-bamoe-enterprise-maven-repo</id>
+      <url>file:///C:/bamoe/805_to_920/maven-repo-9.2.1-ibm-0005/</url>
+      <releases />
+      <snapshots><enabled>false</enabled></snapshots>
+    </pluginRepository>
+  </pluginRepositories>
+
+
+
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-maven-plugin</artifactId>
+        <version>${quarkus.version}</version>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <goals>
+              <goal>build</goal>
+              <goal>generate-code</goal>
+              <goal>generate-code-tests</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

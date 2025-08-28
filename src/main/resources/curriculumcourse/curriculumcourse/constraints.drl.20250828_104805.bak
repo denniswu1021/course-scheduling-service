@@ -1,0 +1,70 @@
+package curriculumcourse.curriculumcourse
+
+import curriculumcourse.curriculumcourse.*;
+
+global com.example.rules.ScoreHolderShim scoreHolder;
+
+/* ??????????????????????????????殉???? */
+rule "Room occupancy"
+when
+  $a : Lecture( $p : period, $r : room )
+  Lecture( this != $a, period == $p, room == $r )
+then
+  scoreHolder.addHardPenalty(kcontext, 1);
+end
+
+/* ???????????????????????殉????????????*/
+rule "Teacher conflict"
+when
+  $a : Lecture( $p : period, $t : teacher )
+  Lecture( this != $a, period == $p, teacher == $t )
+then
+  scoreHolder.addHardPenalty(kcontext, 1);
+end
+
+/* ??????????????????殉????????????????????????*/
+rule "Same course same period"
+when
+  $a : Lecture( $p : period, $c : course )
+  Lecture( this != $a, period == $p, course == $c )
+then
+  scoreHolder.addHardPenalty(kcontext, 1);
+end
+
+/* ?????Curriculum ???????????????????????????殉???????? */
+rule "Curriculum conflict"
+when
+  $a : Lecture( $p : period, $c1 : course )
+  $b : Lecture( this != $a, period == $p, $c2 : course )
+  eval( $c1.getCurriculum() 
+        && $c1.getCurriculum().equals($c2.getCurriculum()) )
+then
+  scoreHolder.addHardPenalty(kcontext, 1);
+end
+
+/* ????????????????????? Lecture ??room/couse ??????*/
+rule "Room capacity"
+when
+  $l : Lecture( $r : room, $c : course )
+  eval( $r.getCapacity() < $c.getStudentSize() )
+then
+  scoreHolder.addHardPenalty(kcontext, 1);
+end
+
+/* ???????????????????Lecture.period.day ??distinct ?????*/
+rule "Minimum working days"
+when
+  $c : Course( $min : minWorkingDaySize )
+  Number( $distinct : intValue )
+    from accumulate(
+      $l : Lecture( course == $c ),
+      init( java.util.Set _days = new java.util.HashSet(); ),
+      action( _days.add( ($l.getPeriod()  && $l.getPeriod().getDay() ) ? $l.getPeriod().getDay() : null ); ),
+      reverse( _days.remove( ($l.getPeriod()  && $l.getPeriod().getDay() ) ? $l.getPeriod().getDay() : null ); ),
+      result( _days.size() )
+    )
+  eval( $distinct < $min )
+then
+  scoreHolder.addSoftPenalty(kcontext, $min - $distinct);
+end
+

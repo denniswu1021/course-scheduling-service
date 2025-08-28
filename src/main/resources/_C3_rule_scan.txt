@@ -1,0 +1,5 @@
+﻿=== C-3 Rule Scan (accumulate/from/collect) ===
+[C:\Users\dennwu\Course_Scheduling\src\main\resources\curriculumcourse\curriculumcourse\Minimum working days.drl]  line 27: accumulate(
+[C:\Users\dennwu\Course_Scheduling\src\main\resources\curriculumcourse\curriculumcourse\Room stability.drl]  line 27: accumulate(
+
+(完整清單已存檔：C:\Users\dennwu\course-920\course-scheduling-service\src\main\resources\_C3_rule_scan.txt)

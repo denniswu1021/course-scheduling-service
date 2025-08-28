@@ -1,0 +1,273 @@
+package com.example;
+
+
+import com.example.FakeHardSoftScoreHolder;
+import io.quarkus.arc.profile.IfBuildProfile;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+
+import org.kie.api.runtime.KieRuntimeBuilder;
+import org.kie.api.runtime.KieSession;
+import org.kie.api.runtime.rule.RuleContext;
+import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScoreHolder;
+
+import java.lang.reflect.Proxy;
+import java.util.HashMap;
+import java.util.Map;
+
+import curriculumcourse.curriculumcourse.Course;
+import curriculumcourse.curriculumcourse.Lecture;
+import curriculumcourse.curriculumcourse.Room;
+
+@IfBuildProfile("dev")
+@Path("/rules")
+public class RulesResource {
+    @jakarta.inject.Inject
+    org.kie.kogito.rules.KieRuntimeBuilder kieRuntimeBuilder;
+
+    @jakarta.inject.Inject org.kie.kogito.rules.KieRuntimeBuilder kieRuntimeBuilder;
+
+
+    private final KieRuntimeBuilder runtimeBuilder;
+
+    public RulesResource(KieRuntimeBuilder runtimeBuilder) {
+        this.runtimeBuilder = runtimeBuilder;
+    }
+
+    @POST
+    @Path("/test")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Map<String, Object> fireRules() {
+        KieSession kieSession = runtimeBuilder.newKieSession();
+        FakeHardSoftScoreHolder scoreHolder = new FakeHardSoftScoreHolder();
+
+        // --- Minimal HardSoftScoreHolder proxy (no NPE, collects hard/soft deltas) ---
+        final int[] hard = new int[]{0};
+        final int[] soft = new int[]{0};
+
+        HardSoftScoreHolder scoreHolderProxy = (HardSoftScoreHolder) Proxy.newProxyInstance(
+                HardSoftScoreHolder.class.getClassLoader(),
+                new Class[]{HardSoftScoreHolder.class},
+                (proxy, method, args) -> {
+                    String name = method.getName();
+                    // We only care about these two used by your DRL
+                    if ("addHardConstraintMatch".equals(name)) {
+                        // signature: (RuleContext, int)
+                        if (args != null && args.length >= 2 && args[1] instanceof Integer) {
+                            hard[0] += (Integer) args[1];
+                        }
+                        return null;
+                    }
+                    if ("addSoftConstraintMatch".equals(name)) {
+                        // signature: (RuleContext, int)
+                        if (args != null && args.length >= 2 && args[1] instanceof Integer) {
+                            soft[0] += (Integer) args[1];
+                        }
+                        return null;
+                    }
+                    // Common methods some engines may call:
+                    if ("isConstraintMatchEnabled".equals(name)) return Boolean.FALSE;
+                    if ("toString".equals(name)) return "ProxyHardSoftScoreHolder(hard=" + hard[0] + ", soft=" + soft[0] + ")";
+                    // Anything else -> no-op / default
+                    return null;
+                }
+        );
+
+        // set as DRL global "scoreHolder"
+        kieSession.setGlobal("scoreHolder", scoreHolder);
+        // ----------------------------------------------------------------------
+
+        // Dummy facts: one course assigned to two different rooms (should trigger "Room stability")
+        Course course = new Course();
+        Room roomA = new Room();
+        Room roomB = new Room();
+
+        Lecture lecture1 = new Lecture();
+        lecture1.setCourse(course);
+        lecture1.setRoom(roomA);
+
+        Lecture lecture2 = new Lecture();
+        lecture2.setCourse(course);
+        lecture2.setRoom(roomB);
+
+        kieSession.insert(course);
+        kieSession.insert(roomA);
+        kieSession.insert(roomB);
+        kieSession.insert(lecture1);
+        kieSession.insert(lecture2);
+
+        int fired = kieSession.fireAllRules();
+        kieSession.dispose();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("fired", fired);
+        result.put("hard", hard[0]);
+        result.put("soft", soft[0]);
+        return result;
+    }
+    
+    // ??RulesResource.java ????????????????????????? /rules/test ??????
+@POST
+@Path("/testMinimumDays")
+@Produces(MediaType.APPLICATION_JSON)
+public Map<String, Object> fireMinimumDaysRule() {
+    KieSession kieSession = runtimeBuilder.newKieSession();
+        FakeHardSoftScoreHolder scoreHolder = new FakeHardSoftScoreHolder();
+
+    // --- HardSoftScoreHolder ??Proxy??????hard/soft ??????---
+    final int[] hard = new int[]{0};
+    final int[] soft = new int[]{0};
+    HardSoftScoreHolder scoreHolderProxy = (HardSoftScoreHolder) java.lang.reflect.Proxy.newProxyInstance(
+            HardSoftScoreHolder.class.getClassLoader(),
+            new Class[]{HardSoftScoreHolder.class},
+            (proxy, method, args) -> {
+                String name = method.getName();
+                if ("addHardConstraintMatch".equals(name)) {
+                    if (args != null && args.length >= 2 && args[1] instanceof Integer i) hard[0] += i;
+                    return null;
+                }
+                if ("addSoftConstraintMatch".equals(name)) {
+                    if (args != null && args.length >= 2 && args[1] instanceof Integer i) soft[0] += i;
+                    return null;
+                }
+                if ("isConstraintMatchEnabled".equals(name)) return Boolean.FALSE;
+                return null; // ????????????no-op
+            }
+    );
+    kieSession.setGlobal("scoreHolder", scoreHolder);
+    // --------------------------------------------------------------
+
+    // === ????????????????????????????????????????2 ???????????1 ?????????Minimum working days ===
+    curriculumcourse.curriculumcourse.Course course = new curriculumcourse.curriculumcourse.Course();
+    // ?????????setter ???????????????????????????????????
+    setIfExists(course, "setMinWorkingDaySize", int.class, 2);
+
+    curriculumcourse.curriculumcourse.Day dayMon = new curriculumcourse.curriculumcourse.Day();
+    // ??????????????????setter ???????????獢????????????????????????
+    // setIfExists(dayMon, "setName", String.class, "MON");
+
+    curriculumcourse.curriculumcourse.Period p1 = new curriculumcourse.curriculumcourse.Period();
+    setIfExists(p1, "setDay", curriculumcourse.curriculumcourse.Day.class, dayMon);
+
+    // ??????Lecture ??????????????????????????????2 ?????????????????????????????????
+    curriculumcourse.curriculumcourse.Lecture l1 = new curriculumcourse.curriculumcourse.Lecture();
+    setIfExists(l1, "setCourse", curriculumcourse.curriculumcourse.Course.class, course);
+    setIfExists(l1, "setPeriod", curriculumcourse.curriculumcourse.Period.class, p1);
+
+    curriculumcourse.curriculumcourse.Lecture l2 = new curriculumcourse.curriculumcourse.Lecture();
+    setIfExists(l2, "setCourse", curriculumcourse.curriculumcourse.Course.class, course);
+    setIfExists(l2, "setPeriod", curriculumcourse.curriculumcourse.Period.class, p1);
+
+    // ??????????????
+    kieSession.insert(course);
+    kieSession.insert(dayMon);
+    kieSession.insert(p1);
+    kieSession.insert(l1);
+    kieSession.insert(l2);
+
+    int fired = kieSession.fireAllRules();
+    kieSession.dispose();
+
+    Map<String, Object> result = new HashMap<>();
+    result.put("fired", fired);
+    result.put("hard", hard[0]);
+    result.put("soft", soft[0]); // ??? < 0?????????
+    return result;
+}
+
+
+    @POST
+    
+
+
+/** ???????????????????????謑黑? setter????????????????????????????*/
+private static void setIfExists(Object target, String setterName, Class<?> paramType, Object value) {
+    try {
+        var m = target.getClass().getMethod(setterName, paramType);
+        m.invoke(target, value);
+    } catch (NoSuchMethodException ignored) {
+        // ???????????setter ?????????
+    } catch (Exception e) {
+        throw new RuntimeException("Failed to call " + setterName + " on " + target.getClass().getName(), e);
+    }
+}
+
+
+
+    // === DEV: force fire Room occupancy rule ===
+    @POST
+    @Path("/testDev")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result testDev() {
+        var kieSession = kieRuntimeBuilder.newKieSession();
+        var scoreHolder = new FakeHardSoftScoreHolder();
+        kieSession.setGlobal("scoreHolder", scoreHolder);
+
+        curriculumcourse.curriculumcourse.Room r = new curriculumcourse.curriculumcourse.Room();
+        curriculumcourse.curriculumcourse.Period p = new curriculumcourse.curriculumcourse.Period();
+
+        curriculumcourse.curriculumcourse.Lecture a = new curriculumcourse.curriculumcourse.Lecture();
+        a.setRoom(r);
+        a.setPeriod(p);
+
+        curriculumcourse.curriculumcourse.Lecture b = new curriculumcourse.curriculumcourse.Lecture();
+        b.setRoom(r);
+        b.setPeriod(p);
+
+        kieSession.insert(a);
+        kieSession.insert(b);
+
+        int fired = kieSession.fireAllRules();
+        return new Result(fired, scoreHolder.getHardScore(), scoreHolder.getSoftScore());
+    }
+
+    // === DEV: force fire minimumWorkingDays (dayCount=1, min=2 => soft -5) ===
+    @POST
+    @Path("/testMinimumDaysDev")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result testMinimumDaysDev() {
+        var kieSession = kieRuntimeBuilder.newKieSession();
+        var scoreHolder = new FakeHardSoftScoreHolder();
+        kieSession.setGlobal("scoreHolder", scoreHolder);
+
+        curriculumcourse.curriculumcourse.Course c = new curriculumcourse.curriculumcourse.Course();
+        setIfExists(c, "minWorkingDaySize", int.class, 2);
+
+        curriculumcourse.curriculumcourse.Day d1 = new curriculumcourse.curriculumcourse.Day();
+        curriculumcourse.curriculumcourse.Day d2 = new curriculumcourse.curriculumcourse.Day();
+
+        curriculumcourse.curriculumcourse.Period p1 = new curriculumcourse.curriculumcourse.Period();
+        curriculumcourse.curriculumcourse.Period p2 = new curriculumcourse.curriculumcourse.Period();
+        setIfExists(p1, "day", curriculumcourse.curriculumcourse.Day.class, d1);
+        setIfExists(p2, "day", curriculumcourse.curriculumcourse.Day.class, d1); // both lectures on the same day => count = 1
+
+        curriculumcourse.curriculumcourse.Lecture l1 = new curriculumcourse.curriculumcourse.Lecture();
+        setIfExists(l1, "course", curriculumcourse.curriculumcourse.Course.class, c);
+        setIfExists(l1, "period", curriculumcourse.curriculumcourse.Period.class, p1);
+
+        curriculumcourse.curriculumcourse.Lecture l2 = new curriculumcourse.curriculumcourse.Lecture();
+        setIfExists(l2, "course", curriculumcourse.curriculumcourse.Course.class, c);
+        setIfExists(l2, "period", curriculumcourse.curriculumcourse.Period.class, p2);
+
+        // $day : Day() in accumulate must see Day facts
+        kieSession.insert(d1);
+        kieSession.insert(d2);
+        kieSession.insert(c);
+        kieSession.insert(l1);
+        kieSession.insert(l2);
+
+        int fired = kieSession.fireAllRules();
+        return new Result(fired, scoreHolder.getHardScore(), scoreHolder.getSoftScore());
+    }
+
+    public static class Result {
+        public final int fired;
+        public final int hard;
+        public final int soft;
+        public Result(int fired, int hard, int soft) {
+            this.fired = fired; this.hard = hard; this.soft = soft;
+        }
+    }
+}

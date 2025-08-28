@@ -1,0 +1,98 @@
+package curriculumcourse.curriculumcourse
+
+import java.util.Set;
+import java.util.HashSet;
+
+import curriculumcourse.curriculumcourse.Lecture;
+import curriculumcourse.curriculumcourse.Course;
+import curriculumcourse.curriculumcourse.Curriculum;
+import curriculumcourse.curriculumcourse.Period;
+import curriculumcourse.curriculumcourse.Room;
+import curriculumcourse.curriculumcourse.Teacher;
+import curriculumcourse.curriculumcourse.Day;
+
+global com.example.rules.ScoreHolderShim scoreHolder;
+
+// Room occupancy
+rule "Room occupancy"
+when
+    $p : Period()
+    $r : Room()
+    $cnt : Number( intValue > 1 ) from accumulate(
+        Lecture( period == $p, room == $r ),
+        count(1)
+    )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -($cnt.intValue() - 1));
+end
+
+// Teacher conflict
+rule "Teacher conflict"
+when
+    $p : Period()
+    $total : Number() from accumulate(
+        Lecture( period == $p ),
+        count(1)
+    )
+    $distinct : Number() from accumulate(
+        $l : Lecture( period == $p ),
+        init( Set s = new HashSet(); ),
+        action( s.add($l.getTeacher()); ),
+        reverse( s.remove($l.getTeacher()); ),
+        result( s.size() )
+    )
+    eval( $total.intValue() > $distinct.intValue() )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -($total.intValue() - $distinct.intValue()));
+end
+
+// Same course same period
+rule "Same course same period"
+when
+    $p : Period()
+    $c : Course()
+    $cnt : Number( intValue > 1 ) from accumulate(
+        Lecture( period == $p, course == $c ),
+        count(1)
+    )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -($cnt.intValue() - 1));
+end
+
+// Curriculum conflict
+rule "Curriculum conflict"
+when
+    $p   : Period()
+    $cur : Curriculum()
+    $cnt : Number( intValue > 1 ) from accumulate(
+        Lecture( period == $p, course != null, course.curriculum == $cur ),
+        count(1)
+    )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -($cnt.intValue() - 1));
+end
+
+// Room capacity
+rule "Room capacity"
+when
+    $l : Lecture( $r : room, $c : course )
+    Course( this == $c, $size : studentSize )
+    Room(   this == $r, capacity < $size )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -1);
+end
+
+// Minimum working days
+rule "Minimum working days"
+when
+    $c    : Course( $min : minWorkingDaySize )
+    $days : Number( intValue < $min ) from accumulate(
+        $l : Lecture( course == $c ),
+        init( Set s = new HashSet(); ),
+        action( if ($l.getPeriod() != null && $l.getPeriod().getDay() != null) { s.add($l.getPeriod().getDay()); } ),
+        reverse( if ($l.getPeriod() != null && $l.getPeriod().getDay() != null) { s.remove($l.getPeriod().getDay()); } ),
+        result( s.size() )
+    )
+then
+    scoreHolder.addSoftConstraintMatch(kcontext, -($min - $days.intValue()));
+end

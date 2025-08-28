@@ -1,0 +1,10 @@
+<solver>
+  <solutionClass>curriculumcourse.curriculumcourse.CourseSchedule</solutionClass>
+  <entityClass>curriculumcourse.curriculumcourse.Lecture</entityClass>
+  <scoreDirectorFactory>
+    <scoreDrl>constraints.drl</scoreDrl>
+  </scoreDirectorFactory>
+  <termination>
+    <secondsSpentLimit>10</secondsSpentLimit>
+  </termination>
+</solver>

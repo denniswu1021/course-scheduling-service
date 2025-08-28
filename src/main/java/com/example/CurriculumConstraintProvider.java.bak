@@ -1,0 +1,52 @@
+﻿package com.example;
+
+import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore;
+import org.optaplanner.core.api.score.stream.*;
+import curriculumcourse.curriculumcourse.Course;
+import curriculumcourse.curriculumcourse.Lecture;
+import curriculumcourse.curriculumcourse.Period;
+import curriculumcourse.curriculumcourse.Day;
+import curriculumcourse.curriculumcourse.Room;
+
+public class CurriculumConstraintProvider implements ConstraintProvider {
+
+    @Override
+    public Constraint[] defineConstraints(ConstraintFactory f) {
+        return new Constraint[] {
+                minimumWorkingDays(f),
+                roomStability(f)
+        };
+    }
+
+    // 等價於你在 DRL 已驗證的 minimumWorkingDays（soft，每缺一天 *5）
+    private Constraint minimumWorkingDays(ConstraintFactory f) {
+        return f.forEach(Course.class)
+                .join(Lecture.class,
+                        Joiners.equal((Course c) -> c, Lecture::getCourse))
+                .filter((c, l) -> l.getPeriod() != null
+                        && l.getPeriod().getDay() != null)
+                .groupBy((c, l) -> c,
+                        ConstraintCollectors.countDistinct((c, l) -> l.getPeriod().getDay()))
+                .penalize("minimumWorkingDays",
+                        HardSoftScore.ofSoft(5),
+                        (c, dayCount) -> {
+                            Integer min = c.getMinWorkingDaySize();
+                            if (min == null) return 0;
+                            int deficit = min - dayCount;
+                            return Math.max(0, deficit);
+                        });
+    }
+
+    // 等價於 Room stability（同一課程用多間教室  每多 1 間扣 1 soft）
+    private Constraint roomStability(ConstraintFactory f) {
+        return f.forEach(Course.class)
+                .join(Lecture.class,
+                        Joiners.equal((Course c) -> c, Lecture::getCourse))
+                .filter((c, l) -> l.getRoom() != null)
+                .groupBy((c, l) -> c,
+                        ConstraintCollectors.countDistinct((c, l) -> l.getRoom()))
+                .penalize("Room stability",
+                        HardSoftScore.ONE_SOFT,
+                        (c, roomCount) -> Math.max(0, roomCount - 1));
+    }
+}

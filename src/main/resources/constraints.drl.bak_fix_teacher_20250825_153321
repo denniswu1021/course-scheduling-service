@@ -1,0 +1,96 @@
+package curriculumcourse.curriculumcourse;
+
+import java.lang.Number;
+import curriculumcourse.curriculumcourse.Course;
+import curriculumcourse.curriculumcourse.Curriculum;
+import curriculumcourse.curriculumcourse.Day;
+import curriculumcourse.curriculumcourse.Lecture;
+import curriculumcourse.curriculumcourse.Period;
+import curriculumcourse.curriculumcourse.Room;
+import curriculumcourse.curriculumcourse.Teacher;
+
+global org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScoreHolder scoreHolder;
+
+// -----------------------------
+// HARD constraints
+// -----------------------------
+
+// 1) Room occupancy: same room & period cannot host two lectures at the same time.
+rule "Room occupancy"
+when
+    $a: Lecture( period != null, room != null, $p: period, $r: room )
+    Lecture( this != $a, period == $p, room == $r, eval(System.identityHashCode(this) > System.identityHashCode($a)) )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -1);
+end
+
+// 2) Teacher conflict: the same teacher cannot teach two lectures in the same period.
+rule "Teacher conflict"
+when
+    $a: Lecture( period != null, teacher != null, $p: period, $t: teacher )
+    Lecture( this != $a, period == $p, teacher == $t, eval(System.identityHashCode(this) > System.identityHashCode($a)) )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -1);
+end
+
+// 3) Lecture conflict - same course in same period.
+rule "Lecture conflict - same course in same period"
+when
+    $a: Lecture( period != null, course != null, $p: period, $c: course )
+    Lecture( this != $a, period == $p, course == $c, eval(System.identityHashCode(this) > System.identityHashCode($a)) )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -1);
+end
+
+// 4) Lecture conflict - curriculum: two lectures from the same curriculum cannot be in the same period.
+rule "Lecture conflict - curriculum"
+when
+    $a: Lecture( period != null, course != null, course.curriculum != null, $p: period, $cur: course.curriculum )
+    Lecture( this != $a, period == $p, course != null, course.curriculum == $cur, eval(System.identityHashCode(this) > System.identityHashCode($a)) )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -1);
+end
+
+// 5) Room capacity: penalize excess students over room capacity.
+rule "Room capacity"
+when
+    $l: Lecture( room != null, course != null, $cap: room.capacity, $size: course.studentSize )
+    eval( $size > $cap )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -1 * ($size - $cap));
+end
+
+// -----------------------------
+// SOFT constraints
+// -----------------------------
+
+// 6) Minimum working days: each course should span at least minWorkingDaySize distinct days.
+//    Penalty: 5 points per missing day.
+rule "minimumWorkingDays"
+when
+    $course: Course( $min: minimumWorkingDaySize )
+    accumulate(
+        $day: Day()
+        and exists( Lecture( course == $course, period != null, period.day == $day ) );
+        $dayCount: count($day);
+        $dayCount < $min
+    )
+    // ensure the course has at least one lecture (avoid false positives when there are none)
+    exists( Lecture( course == $course, period != null ) )
+then
+    scoreHolder.addSoftConstraintMatch(kcontext, ($dayCount.intValue() - $min) * 5);
+end
+
+// 7) Room stability: prefer keeping all lectures of the same course in a single room.
+//    Penalty: one point for each extra distinct room beyond the first.
+rule "Room stability"
+when
+    $course: Course()
+    accumulate(
+        $room: Room() and exists( Lecture( course == $course, room == $room ) );
+        $roomCount: count($room);
+        $roomCount > 1
+    )
+then
+    scoreHolder.addSoftConstraintMatch(kcontext, -1 * ($roomCount.intValue() - 1));
+end

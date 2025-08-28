@@ -1,0 +1,34 @@
+package curriculumcourse.curriculumcourse;
+
+import curriculumcourse.curriculumcourse.Course;
+import curriculumcourse.curriculumcourse.Day;
+import curriculumcourse.curriculumcourse.Lecture;
+import curriculumcourse.curriculumcourse.Room;
+import curriculumcourse.curriculumcourse.Period;
+
+import com.example.FakeHardSoftScoreHolder;
+global com.example.FakeHardSoftScoreHolder scoreHolder;
+
+// Room occupancy conflict: two distinct lectures same room & same period -> hard -1
+rule "Room occupancy conflict"
+when
+    $l1 : Lecture( room != null, period != null )
+    $l2 : Lecture( this != $l1, room == $l1.room, period != null, period == $l1.period )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -1);
+end
+
+// minimumWorkingDays: penalize 5 * missingDays if scheduled on fewer days than required
+rule "minimumWorkingDays"
+when
+    $course : Course( $minWorkingDaySize : minWorkingDaySize )
+    accumulate(
+        $day : Day()
+        and exists Lecture( course == $course, period != null, period.day == $day );
+        $dayCount : count($day);
+        $dayCount < $minWorkingDaySize
+    )
+    exists Lecture( course == $course, period != null )
+then
+    scoreHolder.addSoftConstraintMatch(kcontext, (($dayCount.intValue() - $minWorkingDaySize) * 5));
+end

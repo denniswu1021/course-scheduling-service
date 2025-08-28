@@ -1,0 +1,54 @@
+/*
+ * Copyright 2017 Red Hat, Inc.
+ * Licensed under the Apache License, Version 2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
+ */
+
+package curriculumcourse.curriculumcourse;
+
+import java.lang.Number;
+
+import curriculumcourse.curriculumcourse.Course;
+import curriculumcourse.curriculumcourse.Day;
+import curriculumcourse.curriculumcourse.Lecture;
+import curriculumcourse.curriculumcourse.Room;
+
+import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScoreHolder;
+global HardSoftScoreHolder scoreHolder;
+
+/* =========================
+   Rule: Minimum working days
+   ========================= */
+rule "minimumWorkingDays"
+    when
+        $course : Course($minWorkingDaySize : minWorkingDaySize)
+        accumulate(
+            $day : Day()
+            and exists Lecture(course == $course, period != null, period.day == $day);
+            $dayCount : count($day);
+            $dayCount < $minWorkingDaySize
+        )
+        exists Lecture(course == $course, period != null)
+    then
+        // Penalty if the course is scheduled on fewer days than required
+        scoreHolder.addSoftConstraintMatch(kcontext,
+            (($dayCount.intValue() - $minWorkingDaySize) * 5));
+end
+
+/* =================
+   Rule: Room stability
+   ================= */
+rule "Room stability"
+    when
+        $course : Course()
+        accumulate(
+            $room : Room()
+            and exists Lecture(course == $course, room == $room);
+            $roomCount : count($room);
+            $roomCount > 1
+        )
+    then
+        // Penalty if a course is spread across multiple rooms
+        scoreHolder.addSoftConstraintMatch(kcontext,
+            -($roomCount.intValue() - 1));
+end

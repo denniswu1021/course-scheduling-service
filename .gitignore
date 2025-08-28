@@ -1,0 +1,23 @@
+﻿# Maven/Java build
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.log
+
+# IntelliJ/IDEA
+.idea/
+*.iml
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# backups
+pom.*.backup.xml

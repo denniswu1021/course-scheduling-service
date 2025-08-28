@@ -1,0 +1,107 @@
+package curriculumcourse.curriculumcourse;
+
+import java.lang.Number;
+
+import curriculumcourse.curriculumcourse.Course;
+import curriculumcourse.curriculumcourse.Curriculum;
+import curriculumcourse.curriculumcourse.Day;
+import curriculumcourse.curriculumcourse.Lecture;
+import curriculumcourse.curriculumcourse.Period;
+import curriculumcourse.curriculumcourse.Room;
+import curriculumcourse.curriculumcourse.Teacher;
+
+import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScoreHolder;
+
+global HardSoftScoreHolder scoreHolder;
+
+/* Minimum working days */
+rule "minimumWorkingDays"
+when
+    $course : Course($minWorkingDaySize : minWorkingDaySize)
+    accumulate(
+        $day : Day()
+        and exists Lecture(course == $course, period != null, period.day == $day);
+        $dayCount : count($day);
+        $dayCount < $minWorkingDaySize
+    )
+    exists Lecture(course == $course, period != null)
+then
+    scoreHolder.addSoftConstraintMatch(kcontext,
+        ($dayCount.intValue() - $minWorkingDaySize) * 5);
+end
+
+/* Room stability */
+rule "Room stability"
+when
+    $course : Course()
+    accumulate(
+        $room : Room()
+        and exists Lecture(course == $course, room == $room);
+        $roomCount : count($room);
+        $roomCount > 1
+    )
+then
+    scoreHolder.addSoftConstraintMatch(kcontext, -($roomCount.intValue() - 1));
+end
+
+/* Room occupancy (hard) */
+rule "Room occupancy"
+when
+    $l1 : Lecture( room != null, period != null )
+    $l2 : Lecture( this != $l1,
+                   room == $l1.room,
+                   period == $l1.period,
+                   eval( System.identityHashCode($l1) < System.identityHashCode($l2) ) )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -1);
+end
+
+/* Same course in same period (hard) */
+rule "Lecture conflict - same course in same period"
+when
+    $l1 : Lecture( course != null, period != null )
+    $l2 : Lecture( this != $l1,
+                   course == $l1.course,
+                   period == $l1.period,
+                   eval( System.identityHashCode($l1) < System.identityHashCode($l2) ) )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -1);
+end
+
+/* Teacher conflict (hard) */
+rule "Lecture conflict - teacher"
+when
+    $l1 : Lecture( course != null, period != null, $c1 : course )
+    $l2 : Lecture( this != $l1, period == $l1.period, $c2 : course != null,
+                   eval( $c1 != null && $c2 != null
+                         && $c1.getTeacher() != null
+                         && $c1.getTeacher().equals( $c2.getTeacher() ) ),
+                   eval( System.identityHashCode($l1) < System.identityHashCode($l2) ) )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -1);
+end
+
+/* Curriculum conflict (hard) */
+rule "Lecture conflict - curriculum"
+when
+    $l1 : Lecture( course != null, period != null, $c1 : course )
+    $l2 : Lecture( this != $l1, period == $l1.period, $c2 : course != null,
+                   eval( $c1 != null && $c2 != null
+                         && $c1.getCurriculum() != null
+                         && $c1.getCurriculum().equals( $c2.getCurriculum() ) ),
+                   eval( System.identityHashCode($l1) < System.identityHashCode($l2) ) )
+then
+    scoreHolder.addHardConstraintMatch(kcontext, -1);
+end
+
+/* Room capacity (hard) */
+rule "Room capacity"
+when
+    $l : Lecture( room != null, course != null,
+                  eval( $l.getRoom() != null
+                        && $l.getCourse() != null
+                        && $l.getRoom().getCapacity() < $l.getCourse().getStudentSize() ) )
+then
+    scoreHolder.addHardConstraintMatch(kcontext,
+        $l.getRoom().getCapacity() - $l.getCourse().getStudentSize());
+end

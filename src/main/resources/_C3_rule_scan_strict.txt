@@ -1,0 +1,3 @@
+﻿=== Strict C-3 scan (accumulate/collect/from) ===
+
+(輸出：C:\Users\dennwu\course-920\course-scheduling-service\src\main\resources\_C3_rule_scan_strict.txt)
