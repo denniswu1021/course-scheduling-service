@@ -1,0 +1,76 @@
+package curriculumcourse.curriculumcourse
+import java.lang.Integer;
+import curriculumcourse.curriculumcourse.Period;
+import curriculumcourse.curriculumcourse.Curriculum;
+import curriculumcourse.curriculumcourse.Room;
+import curriculumcourse.curriculumcourse.Lecture;
+import curriculumcourse.curriculumcourse.Course;
+global com.example.rules.ScoreHolderShim scoreHolder;
+
+import curriculumcourse.curriculumcourse.*;
+
+global com.example.rules.ScoreHolderShim scoreHolder;
+
+/* ??????????????????????????????????? */
+rule "Room occupancy"
+when
+  $a : Lecture( $p : period, $r : room )
+  Lecture( this != $a, period == $p, room == $r )
+then
+  scoreHolder.addHardPenalty(kcontext, 1);
+end
+
+/* ????????????????????????????????????*/
+rule "Teacher conflict"
+when
+  $a : Lecture( $p : period, $t : teacher )
+  Lecture( this != $a, period == $p, teacher == $t )
+then
+  scoreHolder.addHardPenalty(kcontext, 1);
+end
+
+/* ??????????????????????????????????????????????*/
+rule "Same course same period"
+when
+  $a : Lecture( $p : period, $c : course )
+  Lecture( this != $a, period == $p, course == $c )
+then
+  scoreHolder.addHardPenalty(kcontext, 1);
+end
+
+/* ?????Curriculum ???????????????????????????????????? */
+rule "Curriculum conflict"
+when
+  $l1 : Lecture( $p : period, $c1 : course )
+  $cur1 : Curriculum() from $c1.curriculum
+  $l2 : Lecture( this != $l1, period == $p, $c2 : course )
+  Curriculum( this == $cur1 ) from $c2.curriculum
+then
+  scoreHolder.addHardPenalty(kcontext, 1);
+end
+
+
+/* ????????????????????? Lecture ??room/couse ??????*/
+rule "Room capacity"
+when
+   : Lecture(  : room,  : course )
+  Room( this == , capacity < .studentSize )
+then
+  scoreHolder.addHardPenalty(kcontext, 1);
+end
+
+/* ???????????????????Lecture.period.day ??distinct ?????*/
+rule "Minimum working days"
+when
+   : Course()
+  Number(  : intValue ) from accumulate (
+     Lecture( course == ,  : period ),
+     init( java.util.Set days = new java.util.HashSet(); ),
+     action( days.add( .getDay() ); ),
+     reverse( ),
+     result( days.size() )
+  )
+  Course( this == , minimumWorkingDays >  )
+then
+  scoreHolder.addSoftPenalty(kcontext, .getMinimumWorkingDays() - );
+end

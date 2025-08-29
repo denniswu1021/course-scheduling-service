@@ -1,71 +1,21 @@
 package curriculumcourse.curriculumcourse
+dialect "java"
+import java.util.Set
+import java.util.HashSet
+function int countInt(Set s) { return s.size(); }
 
-import curriculumcourse.curriculumcourse.*;
-
-global com.example.rules.ScoreHolderShim scoreHolder;
-
-/* ??????????????????????????????????? */
-rule "Room occupancy"
-when
-  $a : Lecture( $p : period, $r : room )
-  Lecture( this != $a, period == $p, room == $r )
-then
-  scoreHolder.addHardPenalty(kcontext, 1);
-end
-
-/* ????????????????????????????????????*/
-rule "Teacher conflict"
-when
-  $a : Lecture( $p : period, $t : teacher )
-  Lecture( this != $a, period == $p, teacher == $t )
-then
-  scoreHolder.addHardPenalty(kcontext, 1);
-end
-
-/* ??????????????????????????????????????????????*/
-rule "Same course same period"
-when
-  $a : Lecture( $p : period, $c : course )
-  Lecture( this != $a, period == $p, course == $c )
-then
-  scoreHolder.addHardPenalty(kcontext, 1);
-end
-
-/* ?????Curriculum ???????????????????????????????????? */
-rule "Curriculum conflict"
-when
-  $l1 : Lecture( $p : period, $c1 : course )
-  $cur1 : Curriculum() from $c1.curriculum
-  $l2 : Lecture( this != $l1, period == $p, $c2 : course )
-  Curriculum( this == $cur1 ) from $c2.curriculum
-then
-  scoreHolder.addHardPenalty(kcontext, 1);
-end
-
-
-/* ????????????????????? Lecture ??room/couse ??????*/
-rule "Room capacity"
-when
-  Lecture( room.capacity < course.studentSize )
-then
-  scoreHolder.addHardPenalty(kcontext, 1);
-end
-
-/* ???????????????????Lecture.period.day ??distinct ?????*/
 rule "Minimum working days"
 when
-   : Course(  : minimumWorkingDays )
-  Number(  : intValue, intValue <  ) from accumulate(
-      Lecture( course == , C:\Users\dennwu\course-920\course-scheduling-service\src\test\java\com\example\solver\NoopConstraintProvider.java : period ),
-      init( java.util.Set days = new java.util.HashSet(); ),
-      action( days.add( C:\Users\dennwu\course-920\course-scheduling-service\src\test\java\com\example\solver\NoopConstraintProvider.java.getDay() ); ),
-      reverse( ),
-      result( days.size() )
+  $course : Course( $min : minimumWorkingDays )
+  Number( $distinct : intValue ) from accumulate(
+     // 綁定 day；action/result 不做點號呼叫
+     Lecture( course == $course, $day : period.day ),
+     init( Set days = new HashSet(); ),
+     action( days.add( $day ); ),
+     reverse( ),
+     result( countInt(days) )
   )
+  eval( $distinct < $min )
 then
-  scoreHolder.addSoftPenalty(kcontext,  - );
+  scoreHolder.addSoftPenalty(kcontext, $min - $distinct);
 end
-
-
-
-

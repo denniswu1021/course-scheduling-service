@@ -1,10 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <groupId>com.example</groupId>
   <artifactId>course-scheduling-service</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <name>course-scheduling-service</name>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
@@ -12,6 +16,7 @@
     <!-- Drools wiring 要用 dynamic（避免 static 造成 Field Extractor/TypeDecl NPE 等） -->
     <drools.version>9.44.0.Final</drools.version>
   </properties>
+
   <!-- 版本對齊：BAMOE 與 Camel Quarkus；移除 drools-bom，改由單點管理 drools-wiring-dynamic -->
   <dependencyManagement>
     <dependencies>
@@ -37,6 +42,7 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+
   <dependencies>
     <!-- Drools / jBPM on Quarkus（依你目前使用） -->
     <dependency>
@@ -55,6 +61,7 @@
       <groupId>org.jbpm</groupId>
       <artifactId>jbpm-with-drools-quarkus</artifactId>
     </dependency>
+
     <!-- Quarkus 基本功能 -->
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -74,11 +81,13 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-health</artifactId>
     </dependency>
+
     <!-- OptaPlanner on Camel Quarkus -->
     <dependency>
       <groupId>org.apache.camel.quarkus</groupId>
       <artifactId>camel-quarkus-optaplanner</artifactId>
     </dependency>
+
     <!-- 測試期確保 dynamic wiring -->
     <dependency>
       <groupId>org.drools</groupId>
@@ -92,42 +101,37 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
   <repositories>
     <repository>
       <id>central</id>
       <url>https://repo.maven.apache.org/maven2</url>
       <releases />
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
+      <snapshots><enabled>false</enabled></snapshots>
     </repository>
     <repository>
       <id>ibm-bamoe-enterprise-maven-repo</id>
       <url>file:///C:/bamoe/805_to_920/maven-repo-9.2.1-ibm-0005/</url>
       <releases />
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
+      <snapshots><enabled>false</enabled></snapshots>
     </repository>
   </repositories>
+
   <pluginRepositories>
     <pluginRepository>
       <id>central</id>
       <url>https://repo.maven.apache.org/maven2</url>
       <releases />
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
+      <snapshots><enabled>false</enabled></snapshots>
     </pluginRepository>
     <pluginRepository>
       <id>ibm-bamoe-enterprise-maven-repo</id>
       <url>file:///C:/bamoe/805_to_920/maven-repo-9.2.1-ibm-0005/</url>
       <releases />
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
+      <snapshots><enabled>false</enabled></snapshots>
     </pluginRepository>
   </pluginRepositories>
+
   <build>
     <plugins>
       <plugin>
@@ -145,6 +149,7 @@
           </execution>
         </executions>
       </plugin>
+
       <!-- 測試期固定 drools.wiring=dynamic，並設定 JBoss LogManager -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -159,13 +164,4 @@
       </plugin>
     </plugins>
   </build>
-  <profiles>
-    <profile>
-      <id>kogito</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <dependencies />
-    </profile>
-  </profiles>
 </project>

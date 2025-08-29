@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.example</groupId>
@@ -8,11 +8,12 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>17</maven.compiler.release>
+    <!-- Quarkus 核心版本（與你的開發環境一致） -->
     <quarkus.version>3.20.1</quarkus.version>
-    <!-- Drools wiring 要用 dynamic（避免 static 造成 Field Extractor/TypeDecl NPE 等） -->
+    <!-- Drools 動態 wiring 使用的版本（避免 static wiring 造成的 Field Extractor 錯誤） -->
     <drools.version>9.44.0.Final</drools.version>
   </properties>
-  <!-- 版本對齊：BAMOE 與 Camel Quarkus；移除 drools-bom，改由單點管理 drools-wiring-dynamic -->
+  <!-- 版本對齊：BAMOE 與 Camel Quarkus BOM（移除重複/衝突的 drools-bom） -->
   <dependencyManagement>
     <dependencies>
       <dependency>
@@ -29,7 +30,7 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <!-- 單點管理 dynamic wiring 的版本 -->
+      <!-- 單點管理 drools-wiring-dynamic（避免 version 缺失或重複） -->
       <dependency>
         <groupId>org.drools</groupId>
         <artifactId>drools-wiring-dynamic</artifactId>
@@ -38,7 +39,7 @@
     </dependencies>
   </dependencyManagement>
   <dependencies>
-    <!-- Drools / jBPM on Quarkus（依你目前使用） -->
+    <!-- Drools / jBPM on Quarkus（保留你當前使用的模組） -->
     <dependency>
       <groupId>org.drools</groupId>
       <artifactId>drools-quarkus-decisions</artifactId>
@@ -74,17 +75,18 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-health</artifactId>
     </dependency>
-    <!-- OptaPlanner on Camel Quarkus -->
+    <!-- OptaPlanner on Camel Quarkus（你既有依賴） -->
     <dependency>
       <groupId>org.apache.camel.quarkus</groupId>
       <artifactId>camel-quarkus-optaplanner</artifactId>
     </dependency>
-    <!-- 測試期確保 dynamic wiring -->
+    <!-- 測試期確保載入 dynamic wiring（避免再落到 static） -->
     <dependency>
       <groupId>org.drools</groupId>
       <artifactId>drools-wiring-dynamic</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- 測試框架 -->
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-junit5</artifactId>
@@ -145,7 +147,7 @@
           </execution>
         </executions>
       </plugin>
-      <!-- 測試期固定 drools.wiring=dynamic，並設定 JBoss LogManager -->
+      <!-- 確保測試期使用 drools.wiring=dynamic，並修正 JBoss LogManager 警告 -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -159,13 +161,4 @@
       </plugin>
     </plugins>
   </build>
-  <profiles>
-    <profile>
-      <id>kogito</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <dependencies />
-    </profile>
-  </profiles>
 </project>

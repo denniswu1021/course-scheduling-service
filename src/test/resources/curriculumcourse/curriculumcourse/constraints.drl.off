@@ -46,8 +46,8 @@ end
 /* ????????????????????? Lecture ??room/couse ??????*/
 rule "Room capacity"
 when
-  $l : Lecture( $r : room, $c : course )
-  eval( $r.getCapacity() < $c.getStudentSize() )
+   : Lecture(  : room,  : course )
+  Room( this == , capacity < .studentSize )
 then
   scoreHolder.addHardPenalty(kcontext, 1);
 end
@@ -55,19 +55,15 @@ end
 /* ???????????????????Lecture.period.day ??distinct ?????*/
 rule "Minimum working days"
 when
-  $course : Course()
-  Number( $distinct : intValue ) from accumulate (
-     Lecture( course == $course, $p : period ),
+   : Course()
+  Number(  : intValue ) from accumulate (
+     Lecture( course == ,  : period ),
      init( java.util.Set days = new java.util.HashSet(); ),
-     action( days.add( $p.getDay() ); ),
+     action( days.add( .getDay() ); ),
      reverse( ),
      result( days.size() )
   )
-  eval( $distinct < $course.getMinimumWorkingDays() )
+  Course( this == , minimumWorkingDays >  )
 then
-  scoreHolder.addSoftPenalty(kcontext, $course.getMinimumWorkingDays() - $distinct);
+  scoreHolder.addSoftPenalty(kcontext, .getMinimumWorkingDays() - );
 end
-
-
-
-
